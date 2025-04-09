@@ -1,12 +1,11 @@
-from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, jsonify, session, render_template, redirect, url_for
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix  # Make sure this is imported
 import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+import os
 from datetime import datetime, timedelta
 from functools import wraps
-import os
 
 
 
