@@ -1,3 +1,4 @@
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask import Flask, request, jsonify, session, render_template, redirect, url_for
 from flask_cors import CORS
 import mysql.connector
@@ -6,13 +7,16 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 from datetime import datetime, timedelta
 from functools import wraps
 import os
-from werkzeug.middleware.proxy_fix import ProxyFix
+
 
 
 app = Flask(__name__, template_folder='templates', static_folder="static")
 CORS(app)
 app.secret_key = os.urandom(24)
 app.permanent_session_lifetime = timedelta(days=1)
+
+# Add ProxyFix AFTER creating the app
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # Database connection
 def get_db_connection():
