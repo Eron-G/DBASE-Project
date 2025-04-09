@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin.css') }}">
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <h1>Faculty Development Program - Admin Dashboard</h1>
+            <div class="header-buttons">
+                <button id="logoutBtn" class="btn-secondary">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search activities...">
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card" id="totalFacultyCard">
+                <h3>Total Faculty</h3>
+                <p id="totalFaculty">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Active Faculty</h3>
+                <p id="activeFaculty">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Inactive Faculty</h3>
+                <p id="inactiveFaculty">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Total Activities</h3>
+                <p id="totalActivities">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>This Month</h3>
+                <p id="thisMonth">0</p>
+            </div>
+        </div>
+        </section>
+
+        <section>
+            <h2>Faculty Activities</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Faculty Name</th>
+                            <th>Activity Title</th>
+                            <th>Program Type</th>
+                            <th>Date Started</th>
+                            <th>Date Ended</th>
+                            <th>Time</th>
+                            <th>Organizer</th>
+                            <th>Key Takeaways</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activitiesTableBody">
+                        <tr>
+                            <td colspan="8" class="loading-container">
+                                <div class="loading-spinner"></div>
+                                Loading activities...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    
+    <div id="facultyModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Faculty Members</h2>
+            <div class="table-container">
+                <table class="faculty-table">
+                    <thead>
+                        <tr>
+                            <th>Faculty ID</th>
+                            <th>Name</th>
+                            <th>Join Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+
+                        </tr>
+                    </thead>
+                    <tbody id="facultyTableBody">
+                        <tr>
+                            <td colspan="4" class="loading-container">
+                                <div class="loading-spinner"></div>
+                                Loading faculty...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get modal elements
+            const modal = document.getElementById('facultyModal');
+            const closeBtn = document.querySelector('.close');
+            const totalFacultyCard = document.getElementById('totalFacultyCard');
+
+            // Logout functionality
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                fetch('/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Logout failed');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                    alert('Logout failed. Please try again.');
+                });
+            });
+
+            // Load dashboard data
+            loadDashboard();
+
+            // Search functionality
+            document.getElementById('searchInput').addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const rows = document.querySelectorAll('#activitiesTableBody tr[data-entry]');
+                
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                });
+            });
+
+            // Open modal when clicking on total faculty card
+            totalFacultyCard.addEventListener('click', function() {
+                modal.style.display = 'block';
+                loadFacultyMembers();
+            });
+
+            // Close modal when clicking X
+            closeBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+
+            // Close modal when clicking outside
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            function loadDashboard() {
+                loadStats();
+                loadActivities();
+            }
+
+            function loadStats() {
+    fetch('/admin/stats')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('totalFaculty').textContent = data.stats.totalFaculty;
+                document.getElementById('activeFaculty').textContent = data.stats.activeFaculty;
+                document.getElementById('inactiveFaculty').textContent = data.stats.inactiveFaculty;
+                document.getElementById('totalActivities').textContent = data.stats.totalActivities;
+                document.getElementById('thisMonth').textContent = data.stats.thisMonth;
+            }
+        })
+        .catch(error => console.error('Error loading stats:', error));
+}
+            function loadActivities() {
+                const tableBody = document.getElementById('activitiesTableBody');
+                
+                fetch('/admin/entries')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            window.allEntries = data.entries;
+                            
+                            if (data.count > 0) {
+                                renderActivities(data.entries);
+                            } else {
+                                showEmptyState();
+                            }
+                        } else {
+                            showError(data.message || 'Failed to load activities');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading activities:', error);
+                        showError('Failed to load activities. Please try again.');
+                    });
+            }
+
+            function loadFacultyMembers() {
+    const facultyTableBody = document.getElementById('facultyTableBody');
+    facultyTableBody.innerHTML = '<tr><td colspan="5" class="loading-container"><div class="loading-spinner"></div>Loading faculty...</td></tr>';
+    
+    fetch('/admin/faculty')
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || 'Failed to load faculty');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                if (data.count > 0) {
+                    renderFaculty(data.faculty);
+                } else {
+                    facultyTableBody.innerHTML = '<tr><td colspan="5" class="empty-message">No faculty members found</td></tr>';
+                }
+            } else {
+                throw new Error(data.message || 'Failed to load faculty');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading faculty:', error);
+            facultyTableBody.innerHTML = `<tr><td colspan="5" class="error-message">${error.message || 'Failed to load faculty. Please try again.'}</td></tr>`;
+        });
+}
+
+            function renderActivities(entries) {
+                const tableBody = document.getElementById('activitiesTableBody');
+                tableBody.innerHTML = '';
+    
+                entries.forEach(entry => {
+                    const row = document.createElement('tr');
+                    row.setAttribute('data-entry', 'true');
+        
+                    row.innerHTML = `
+                        <td>${entry.facultyName || 'N/A'}</td>
+                        <td>${entry.title || 'N/A'}</td>
+                        <td>${entry.type || 'N/A'}</td>
+                        <td>${formatDate(entry.date) || 'N/A'}</td>
+                        <td>${formatDate(entry.endDate) || 'N/A'}</td>
+                        <td>${formatTimeRange(entry.timeStart, entry.timeEnd)}</td>
+                        <td>${entry.organizer || 'N/A'}</td>
+                        <td>${entry.takeaways || 'N/A'}</td>
+                    `;
+        
+                    tableBody.appendChild(row);
+                });
+            }
+
+            function renderFaculty(faculty) {
+    const tableBody = document.getElementById('facultyTableBody');
+    tableBody.innerHTML = '';
+    
+    faculty.forEach(member => {
+        const statusClass = member.Faculty_Status === 'Active' ? 'status-active' : 
+                          member.Faculty_Status === 'Inactive' ? 'status-inactive' : 'status-retired';
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${member.Faculty_ID || 'N/A'}</td>
+            <td>${member.Faculty_Name || 'N/A'}</td>
+            <td>${member.join_date || 'N/A'}</td>
+            <td class="${statusClass}">${member.Faculty_Status || 'N/A'}</td>
+            <td>
+                <select class="status-select" data-faculty-id="${member.Faculty_ID}">
+                    <option value="Active" ${member.Faculty_Status === 'Active' ? 'selected' : ''}>Active</option>
+                    <option value="Inactive" ${member.Faculty_Status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                    <option value="Retired" ${member.Faculty_Status === 'Retired' ? 'selected' : ''}>Retired</option>
+                </select>
+                <button class="btn-update-status" data-faculty-id="${member.Faculty_ID}">Update</button>
+            </td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+    
+    // Add event listeners for update buttons
+    document.querySelectorAll('.btn-update-status').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const facultyId = this.getAttribute('data-faculty-id');
+            const statusSelect = document.querySelector(`.status-select[data-faculty-id="${facultyId}"]`);
+            const newStatus = statusSelect.value;
+            
+            updateFacultyStatus(facultyId, newStatus);
+        });
+    });
+}
+function updateFacultyStatus(facultyId, newStatus) {
+    fetch('/admin/update-faculty-status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            faculty_id: facultyId,
+            status: newStatus
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || 'Failed to update status');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Refresh both faculty list and activities
+            loadFacultyMembers();
+            loadActivities();
+            loadStats();
+            alert('Faculty status updated successfully');
+        } else {
+            throw new Error(data.message || 'Failed to update status');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+    });
+}
+            function showEmptyState() {
+                const tableBody = document.getElementById('activitiesTableBody');
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-message">
+                            No activities found in the system
+                        </td>
+                    </tr>
+                `;
+            }
+
+            function showError(message) {
+                const tableBody = document.getElementById('activitiesTableBody');
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="error-message">
+                            ${message}
+                        </td>
+                    </tr>
+                `;
+            }
+
+            function formatDate(dateString) {
+                if (!dateString) return 'N/A';
+                const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                return new Date(dateString).toLocaleDateString(undefined, options);
+            }
+
+            function formatTimeRange(start, end) {
+                if (!start || !end) return 'N/A';
+                return `${formatTime(start)} - ${formatTime(end)}`;
+            }
+
+            function formatTime(timeStr) {
+                if (!timeStr) return 'N/A';
+                return timeStr.substring(0, 5);
+            }
+        });
+    </script>
+</body>
+</html>

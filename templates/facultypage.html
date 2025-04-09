@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='facultypage.css') }}">
+</head>
+<body id="faculty-page">
+    <header>
+        <div class="header-container">
+            <h1>Faculty Development Program Management System</h1>
+            <div class="header-buttons">
+                <button id="adminPageBtn" class="btn-secondary admin-btn" style="display: none;">Admin Dashboard</button>
+                <button id="logoutBtn" class="btn-secondary">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="card">
+            <h2>Add New Professional Development Activity</h2>
+            <p class="subtitle">Fill out the form below to record your participation</p>
+            
+            <form id="activityForm">
+                <div class="form-group">
+                    <label for="activityTitle">Activity Title</label>
+                    <input type="text" id="activityTitle" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="programType">Program Type</label>
+                    <select id="programType" required>
+                        <option value="">Select Type</option>
+                        <option value="Seminar">Seminar</option>
+                        <option value="Webinar">Webinar</option>
+                        <option value="Training">Training</option>
+                        <option value="Workshop">Workshop</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="startDate">Start Date</label>
+                        <input type="date" id="startDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="endDate">End Date (Optional)</label>
+                        <input type="date" id="endDate">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="startTime">Start Time</label>
+                        <input type="time" id="startTime" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="endTime">End Time</label>
+                        <input type="time" id="endTime" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="organizer">Organizer/Provider</label>
+                    <input type="text" id="organizer" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="keyTakeaways">Key Takeaways</label>
+                    <textarea id="keyTakeaways" rows="4" required></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn">Submit Activity</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="history-section">
+            <h2>Your Activity History</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Activity Title</th>
+                            <th>Program Type</th>
+                            <th>Date Started</th>
+                            <th>Date Ended</th>
+                            <th>Time</th>
+                            <th>Organizer</th>
+                            <th>Key Takeaways</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activitiesTableBody">
+                        <tr>
+                            <td colspan="8" class="loading-container">
+                                <div class="loading-spinner"></div>
+                                Loading your activities...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Edit Activity</h2>
+            <form id="editActivityForm">
+                <input type="hidden" id="editProgramId">
+                
+                <div class="form-group">
+                    <label for="editActivityTitle">Activity Title</label>
+                    <input type="text" id="editActivityTitle" required>
+                </div>
+    
+                <div class="form-group">
+                    <label for="editProgramType">Program Type</label>
+                    <select id="editProgramType" required>
+                        <option value="">Select Type</option>
+                        <option value="Seminar">Seminar</option>
+                        <option value="Webinar">Webinar</option>
+                        <option value="Training">Training</option>
+                        <option value="Workshop">Workshop</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editStartDate">Start Date</label>
+                        <input type="date" id="editStartDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editEndDate">End Date (Optional)</label>
+                        <input type="date" id="editEndDate">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editStartTime">Start Time</label>
+                        <input type="time" id="editStartTime" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editEndTime">End Time</label>
+                        <input type="time" id="editEndTime" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editOrganizer">Organizer/Provider</label>
+                    <input type="text" id="editOrganizer" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editKeyTakeaways">Key Takeaways</label>
+                    <textarea id="editKeyTakeaways" rows="4" required></textarea>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is admin
+            fetch('/check-admin')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.is_admin) {
+                        document.getElementById('adminPageBtn').style.display = 'inline-block';
+                        document.getElementById('adminPageBtn').addEventListener('click', function() {
+                            window.location.href = '/admin';
+                        });
+                    }
+                })
+                .catch(error => console.error('Error checking admin status:', error));
+                
+            // Logout functionality
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                fetch('/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Logout failed');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = '/';
+                    }
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                    alert('Logout failed. Please try again.');
+                });
+            });
+
+            // Form submission
+            document.getElementById('activityForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+    
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value || startDate;
+    
+                const activityData = {
+                    title: document.getElementById('activityTitle').value,
+                    type: document.getElementById('programType').value,
+                    startDate: startDate,
+                    endDate: endDate,
+                    timeStart: document.getElementById('startTime').value,
+                    timeEnd: document.getElementById('endTime').value,
+                    organizer: document.getElementById('organizer').value,
+                    takeaways: document.getElementById('keyTakeaways').value
+                };
+
+                fetch('/faculty/activities', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                     },
+                    body: JSON.stringify(activityData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        addActivityToTable(data.activity);
+                        document.getElementById('activityForm').reset();
+                        alert('Activity added successfully!');
+                    }
+                })
+            .catch(error => console.error('Error:', error));
+            });
+
+            // Load activities on page load
+            loadActivities();
+
+            function loadActivities() {
+                fetch('/faculty/activities')
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            if (data.count > 0) {
+                                renderActivities(data.activities);
+                            } else {
+                                showEmptyState();
+                            }
+                        } else {
+                            throw new Error(data.message || 'Failed to load activities');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading activities:', error);
+                        showError(error.message);
+                    });
+            }
+
+            function openEditModal(programId, currentData) {
+        const modal = document.getElementById('editModal');
+        modal.style.display = 'block';
+        
+        // Fill form with current data
+        document.getElementById('editProgramId').value = programId;
+        document.getElementById('editActivityTitle').value = currentData.title;
+        document.getElementById('editProgramType').value = currentData.type;
+        document.getElementById('editStartDate').value = formatDateForInput(currentData.date);
+        document.getElementById('editEndDate').value = formatDateForInput(currentData.endDate);
+        document.getElementById('editOrganizer').value = currentData.organizer;
+        document.getElementById('editKeyTakeaways').value = currentData.takeaways;
+        
+        // Properly parse time range
+        if (currentData.timeStart && currentData.timeEnd) {
+            document.getElementById('editStartTime').value = formatTimeForInput(currentData.timeStart);
+            document.getElementById('editEndTime').value = formatTimeForInput(currentData.timeEnd);
+        } else if (currentData.time) {
+            // Fallback for old format "HH:MM - HH:MM"
+            const [start, end] = currentData.time.split(' - ').map(t => t.trim());
+            document.getElementById('editStartTime').value = formatTimeForInput(start);
+            document.getElementById('editEndTime').value = formatTimeForInput(end);
+        }
+        
+        // Close modal when clicking X
+        document.querySelector('.close-modal').onclick = function() {
+            modal.style.display = 'none';
+        };
+    }
+
+    // Add this new helper function
+    function formatTimeForInput(timeStr) {
+        if (!timeStr) return '';
+        // Handle both "HH:MM:SS" and "HH:MM" formats
+        return timeStr.length > 5 ? timeStr.substring(0, 5) : timeStr;
+    }
+
+    // Update the edit form submission handler
+    document.getElementById('editActivityForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const programId = document.getElementById('editProgramId').value;
+        const saveBtn = document.querySelector('#editActivityForm button[type="submit"]');
+        
+        // Set loading state
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="loading-spinner"></span> Saving...';
+        
+        const updatedData = {
+            title: document.getElementById('editActivityTitle').value,
+            type: document.getElementById('editProgramType').value,
+            startDate: document.getElementById('editStartDate').value,
+            endDate: document.getElementById('editEndDate').value || document.getElementById('editStartDate').value,
+            timeStart: document.getElementById('editStartTime').value,
+            timeEnd: document.getElementById('editEndTime').value,
+            organizer: document.getElementById('editOrganizer').value,
+            takeaways: document.getElementById('editKeyTakeaways').value
+        };
+        
+        fetch(`/faculty/activities/${programId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.message || 'Update failed');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Close modal
+                document.getElementById('editModal').style.display = 'none';
+                
+                // Refresh the activity table
+                loadActivities();
+                
+                // Show success message
+                showMessage('Activity updated successfully');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('Error: ' + error.message, true);
+        })
+        .finally(() => {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Changes';
+        });
+    });
+
+function formatDateForInput(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function showMessage(message, isError = false) {
+    const messageDiv = document.createElement('div');
+    messageDiv.textContent = message;
+    messageDiv.style.position = 'fixed';
+    messageDiv.style.bottom = '20px';
+    messageDiv.style.right = '20px';
+    messageDiv.style.padding = '15px';
+    messageDiv.style.backgroundColor = isError ? '#f44336' : '#4CAF50';
+    messageDiv.style.color = 'white';
+    messageDiv.style.borderRadius = '4px';
+    messageDiv.style.zIndex = '1000';
+    
+    document.body.appendChild(messageDiv);
+    
+    setTimeout(() => {
+        messageDiv.remove();
+    }, 3000);
+}
+
+function renderActivities(activities) {
+    const tableBody = document.getElementById('activitiesTableBody');
+    tableBody.innerHTML = '';
+    
+    activities.forEach(activity => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${activity.title || 'N/A'}</td>
+            <td>${activity.type || 'N/A'}</td>
+            <td>${formatDate(activity.date) || 'N/A'}</td>
+            <td>${formatDate(activity.endDate || activity.date) || 'N/A'}</td>
+            <td>${formatTimeRange(activity.timeStart, activity.timeEnd)}</td>
+            <td>${activity.organizer || 'N/A'}</td>
+            <td>${activity.takeaways || 'No takeaways provided'}</td>
+            <td class="actions-cell">
+                <button class="btn-edit" data-program-id="${activity.Program_ID}">Edit</button>
+                <button class="btn-delete" data-program-id="${activity.Program_ID}">Delete</button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+        
+        // Add event listeners to the new buttons
+        row.querySelector('.btn-edit').addEventListener('click', handleEditActivity);
+        row.querySelector('.btn-delete').addEventListener('click', handleDeleteActivity);
+    });
+}
+// Add these new handler functions
+function handleEditActivity(e) {
+    const programId = e.target.dataset.programId;
+    const row = e.target.closest('tr');
+    
+    // Get current values
+    const currentData = {
+        title: row.cells[0].textContent,
+        type: row.cells[1].textContent,
+        date: row.cells[2].textContent,
+        endDate: row.cells[3].textContent,
+        time: row.cells[4].textContent,
+        organizer: row.cells[5].textContent,
+        takeaways: row.cells[6].textContent
+    };
+    
+    // Open edit modal or convert row to editable form
+    // (Implementation depends on your preferred UI approach)
+    openEditModal(programId, currentData);
+}
+
+function handleDeleteActivity(e) {
+    if (!confirm('Are you sure you want to delete this activity?')) {
+        return;
+    }
+    
+    const programId = e.target.dataset.programId;
+    
+    fetch(`/faculty/activities/${programId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            e.target.closest('tr').remove();
+            showMessage('Activity deleted successfully');
+        } else {
+            throw new Error(data.message || 'Failed to delete activity');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('Error: ' + error.message, true);
+    });
+}
+
+
+            
+
+            
+
+function addActivityToTable(activity) {
+    const tableBody = document.getElementById('activitiesTableBody');
+    
+    if (tableBody.querySelector('.empty-message')) {
+        tableBody.innerHTML = '';
+    }
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td>${activity.title || 'N/A'}</td>
+        <td>${activity.type || 'N/A'}</td>
+        <td>${formatDate(activity.date) || 'N/A'}</td>
+        <td>${formatDate(activity.endDate || activity.date) || 'N/A'}</td>
+        <td>${formatTimeRange(activity.timeStart, activity.timeEnd)}</td>
+        <td>${activity.organizer || 'N/A'}</td>
+        <td>${activity.takeaways || 'No takeaways provided'}</td>
+        <td class="actions-cell">
+            <button class="btn-edit" data-program-id="${activity.program_id}">Edit</button>
+            <button class="btn-delete" data-program-id="${activity.program_id}">Delete</button>
+        </td>
+    `;
+    tableBody.insertBefore(row, tableBody.firstChild);
+    
+    // Add event listeners to the new buttons
+    row.querySelector('.btn-edit').addEventListener('click', handleEditActivity);
+    row.querySelector('.btn-delete').addEventListener('click', handleDeleteActivity);
+}
+
+            function showEmptyState() {
+    const tableBody = document.getElementById('activitiesTableBody');
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="8" class="empty-message">
+                No activities found in your history
+            </td>
+        </tr>
+    `;
+}
+
+function showError(message) {
+    const tableBody = document.getElementById('activitiesTableBody');
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="8" class="error-message">
+                ${message}
+            </td>
+        </tr>
+    `;
+}
+            function formatDate(dateString) {
+                if (!dateString) return 'N/A';
+                const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                return new Date(dateString).toLocaleDateString(undefined, options);
+            }
+
+            function formatTimeRange(start, end) {
+                if (!start || !end) return 'N/A';
+                return `${formatTime(start)} - ${formatTime(end)}`;
+            }
+
+            function formatTime(timeStr) {
+                if (!timeStr) return 'N/A';
+                // Handle both "HH:MM:SS" and "HH:MM" formats
+                return timeStr.substring(0, 5);
+            }
+        });
+    </script>
+</body>
+</html>
