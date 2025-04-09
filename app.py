@@ -2,18 +2,12 @@ from flask import Flask, request, jsonify, session, render_template, redirect, u
 from flask_cors import CORS
 import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
-from werkzeug.middleware.proxy_fix import ProxyFix
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 from datetime import datetime, timedelta
 from functools import wraps
+import os
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-
-
-# Add date validation in models
-def validate_program_dates(start_date, end_date):
-    if end_date < start_date:
-        raise ValueError("End date cannot be before start date")
 
 app = Flask(__name__, template_folder='templates', static_folder="static")
 CORS(app)
@@ -24,19 +18,23 @@ app.permanent_session_lifetime = timedelta(days=1)
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host=os.getenv('DB_HOST', 'localhost'),  # Falls back to localhost if not set
-            user=os.getenv('DB_USER', 'root'),       # Default: 'root'
-            password=os.getenv('DB_PASSWORD', ''),   # Default: empty
+            host=os.getenv('DB_HOST', 'localhost'),  # Uses env var or defaults to localhost
+            user=os.getenv('DB_USER', 'root'),
+            password=os.getenv('DB_PASSWORD', ''), 
             database=os.getenv('DB_NAME', 'FProject'),
             autocommit=True,
-            connect_timeout=10  # Crucial for Philippine networks
+            connect_timeout=30,  # Higher timeout for PH networks
+            pool_size=5          # Connection pooling
         )
         print("Database connection successful")
         return conn
     except mysql.connector.Error as err:
         print(f"Database connection failed: {err}")
-        raise  # Re-raise error for Flask to handle
-
+        return None
+# Add date validation in models
+def validate_program_dates(start_date, end_date):
+    if end_date < start_date:
+        raise ValueError("End date cannot be before start date")
 def ensure_no_transaction(conn):
     """Clean up any existing transaction"""
     if conn.in_transaction:
