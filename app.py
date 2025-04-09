@@ -3,6 +3,8 @@ from flask_cors import CORS
 import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
 import os
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -22,17 +24,18 @@ app.permanent_session_lifetime = timedelta(days=1)
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="", 
-            database="FProject",
-            autocommit=True
+            host=os.getenv('DB_HOST', 'localhost'),  # Falls back to localhost if not set
+            user=os.getenv('DB_USER', 'root'),       # Default: 'root'
+            password=os.getenv('DB_PASSWORD', ''),   # Default: empty
+            database=os.getenv('DB_NAME', 'FProject'),
+            autocommit=True,
+            connect_timeout=10  # Crucial for Philippine networks
         )
         print("Database connection successful")
         return conn
     except mysql.connector.Error as err:
         print(f"Database connection failed: {err}")
-        return None
+        raise  # Re-raise error for Flask to handle
 
 def ensure_no_transaction(conn):
     """Clean up any existing transaction"""
