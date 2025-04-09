@@ -21,13 +21,14 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host=os.getenv('DB_HOST', 'localhost'),  # Uses env var or defaults to localhost
+            host=os.getenv('DB_HOST', 'localhost'),
             user=os.getenv('DB_USER', 'root'),
             password=os.getenv('DB_PASSWORD', ''), 
             database=os.getenv('DB_NAME', 'FProject'),
             autocommit=True,
-            connect_timeout=30,  # Higher timeout for PH networks
-            pool_size=5          # Connection pooling
+            connect_timeout=30,
+            pool_size=5,
+            pool_name="fproject_pool"  # Add explicit pool name
         )
         print("Database connection successful")
         return conn
